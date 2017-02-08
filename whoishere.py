@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
-import logging, sys, json, datetime, signal
+import logging, sys, json, time, signal
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 from scapy.all import *
 from netaddr import *
+import unicodedata
+
 
 version = "0.1"
 
@@ -13,6 +15,9 @@ maxlenght = 20
 minute_list = []
 list = []
 uniquefingerprint = []
+
+reload(sys)
+sys.setdefaultencoding('utf-8') 
 
 def ConfigCheck():
 	if not os.path.isfile(filename) :
@@ -60,8 +65,8 @@ def PrintConfig() :
 		COLOR = '\033[9'+list[0]['list'][i]['color']+'m'
 		print "    "+str(i)+" : " + COLOR + list[0]['list'][i]['mac']+ " - " + list[0]['list'][i]['name'] + '\033[0m'
         print "\n\033[92m\033[1m[+]\033[0m Configuration:"
-	time = str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M')) + "]\033[0m"
-	print "    Current Time       \033[94m\033[1m[" + time
+	timea = time.strftime("%Y-%m-%d %H:%M") + "]\033[0m"
+	print "    Current Time       \033[94m\033[1m[" + timea
         print "    Configuration File \033[94m\033[1m[" + filename + "]\033[0m"
 	print "    Log File           \033[94m\033[1m[" + logfilename + "]\033[0m"
 	print "    Monitor Interface  \033[94m\033[1m[" + interface + "]\033[0m\n"
@@ -88,12 +93,14 @@ def SearchList(pkt) :
 
 def PrintInfo(pkt) :
 	global fingerprint
-	time = str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
+	timea = time.strftime("%Y-%m-%d %H:%M")
 	namef = " NAME: " + name.ljust(maxlenght)[0:maxlenght]
 	mac = " MAC: " + pkt.addr2
 	SSID = " SSID: " + pkt.info.ljust(maxlenght)[0:maxlenght]
+	#SSID = SSID.encode('utf-8', 'ignore')
 	OUI = " OUI: "+ oui
-        fingerprint = COLOR + time + namef + mac + SSID + OUI +'\033[0m'
+        fingerprint = COLOR + timea + namef + mac + SSID + OUI +'\033[0m'
+	#fingerprint = unicodedata.normalize('NFKD', fingerprint).encode('ascii', 'ignore')
 	if fingerprint not in uniquefingerprint :
 		uniquefingerprint.append(fingerprint)
         	print fingerprint

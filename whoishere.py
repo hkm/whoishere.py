@@ -99,7 +99,9 @@ def PrintInfo(pkt) :
 	SSID = " SSID: " + pkt.info.ljust(maxlenght)[0:maxlenght]
 	#SSID = SSID.encode('utf-8', 'ignore')
 	OUI = " OUI: "+ oui
-        fingerprint = COLOR + timea + namef + mac + SSID + OUI +'\033[0m'
+	db = -(256-ord(pkt.notdecoded[-4:-3]))                                         |
+        rssi = " RSSI: "+str(db)                                                       |
+        fingerprint = COLOR + timea + rssi + namef + mac + SSID + OUI +'\033[0m'
 	#fingerprint = unicodedata.normalize('NFKD', fingerprint).encode('ascii', 'ignore')
 	if fingerprint not in uniquefingerprint :
 		uniquefingerprint.append(fingerprint)

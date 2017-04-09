@@ -1,13 +1,10 @@
 #!/usr/bin/env python
 
-import logging, sys, json, time, signal
-logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
+import logging, sys, json, time, signal, httplib, urllib, unicodedata
 from scapy.all import *
 from netaddr import *
-import unicodedata
 
-
-version = "0.1"
+version = "0.2"
 
 filename = "whoishere.conf"
 logfilename = "whoishere.log"
@@ -17,17 +14,19 @@ list = []
 uniquefingerprint = []
 
 reload(sys)
-sys.setdefaultencoding('utf-8') 
+sys.setdefaultencoding('utf-8')
 
 def ConfigCheck():
 	if not os.path.isfile(filename) :
 		print "\n\033[91m\033[1m[+]\033[0m No configuration file found.\033[0m\n"
 		file = open(filename, "w")
 		file.write('{'\
-		'"config" : [{"interface": "wlan0mon"}],\n'\
+		'"config" : [{"interface": "wlan0mon"},\n'\
+		'            {"pushoverapitoken": ""},\n'\
+		'            {"pushoveruserkey": "" }]\n'\
 		'"list"   : [{"name": "James Clerk Maxwell", "mac": "00:co:ca:c0:79:fa", "color": "1"},\n'\
 		'            {"name": "Christian Hulsmeyer", "mac": "ba:ad:c0:de:88:ca", "color": "2"},\n'\
-        	'	    {"name": "Heinrich Hertz", "mac": "e0:0f:00:0a:d0:a0", "color": "3"}]\n'\
+        	'	     {"name": "Heinrich Hertz", "mac": "e0:0f:00:0a:d0:a0", "color": "3"}]\n'\
 		'}')
 		file.close()
 		print "\033[93m\033[1m[+]\033[0m Example configuration file created: \033[94m\033[1m[" + filename + "]\033[0m\n"
@@ -43,6 +42,12 @@ def ConfigCheck():
 			print "\033[91mSomething is wrong with the configuration file."
 			print "Edit or delete "+filename+" and try again.\033[0m\n\n"
 			exit()
+	global pushoverenabled
+        if str(list[0]['config'][1]['pushoverapitoken']) != "" :
+                pushoverenabled = "Enabled"
+        else :
+                pushoverenabled = "Disabled"
+
 
 def Welcome() :
 	banner = "\n".join([
@@ -66,10 +71,11 @@ def PrintConfig() :
 		print "    "+str(i)+" : " + COLOR + list[0]['list'][i]['mac']+ " - " + list[0]['list'][i]['name'] + '\033[0m'
         print "\n\033[92m\033[1m[+]\033[0m Configuration:"
 	timea = time.strftime("%Y-%m-%d %H:%M") + "]\033[0m"
-	print "    Current Time       \033[94m\033[1m[" + timea
-        print "    Configuration File \033[94m\033[1m[" + filename + "]\033[0m"
-	print "    Log File           \033[94m\033[1m[" + logfilename + "]\033[0m"
-	print "    Monitor Interface  \033[94m\033[1m[" + interface + "]\033[0m\n"
+	print "    Current Time            \033[94m\033[1m[" + timea
+        print "    Configuration File      \033[94m\033[1m[" + filename + "]\033[0m"
+	print "    Log File                \033[94m\033[1m[" + logfilename + "]\033[0m"
+	print "    Monitor Interface       \033[94m\033[1m[" + interface + "]\033[0m"
+	print "    Pushover Notifications  \033[94m\033[1m[" + pushoverenabled + "]\033[0m\n"
 	print "\n\033[92m\033[1m[+]\033[0m Listening for probe requests...\n"
 
 def GetOUI(pkt) :
@@ -97,10 +103,8 @@ def PrintInfo(pkt) :
 	namef = " NAME: " + name.ljust(maxlenght)[0:maxlenght]
 	mac = " MAC: " + pkt.addr2
 	SSID = " SSID: " + pkt.info.ljust(maxlenght)[0:maxlenght]
-	#SSID = SSID.encode('utf-8', 'ignore')
 	OUI = " OUI: "+ oui
-	db = -(256-ord(pkt.notdecoded[-4:-3]))                                         
-
+	db = -(256-ord(pkt.notdecoded[-4:-3]))
         if db <= -100:
                 quality = 0
         elif db >= -50:
@@ -108,12 +112,13 @@ def PrintInfo(pkt) :
         else:
                 quality = 2 * (db + 100)
         quality = str(quality)+"%"
-        quality = " QUALITY: " + quality.ljust(maxlenght)[0:maxlenght]
+        quality = " SIGNAL: " + quality.ljust(4, ' ')
         fingerprint = COLOR + timea + quality + namef + mac + SSID + OUI +'\033[0m'
-	#fingerprint = unicodedata.normalize('NFKD', fingerprint).encode('ascii', 'ignore')
 	if fingerprint not in uniquefingerprint :
 		uniquefingerprint.append(fingerprint)
         	print fingerprint
+		if COLOR == '\033[9'+'1'+'m' :
+			pushover_notification(fingerprint[22:-3])
 
 def WriteLog(fingerprint):
         file = open(logfilename, "a")
@@ -131,6 +136,17 @@ def PacketHandler(pkt) :
 def signal_handler(signal, frame):
         print "\n\033[92m\033[1m[+]\033[0m Exiting...\n"
         sys.exit(0)
+
+def pushover_notification(fingerprint):
+	conn = httplib.HTTPSConnection("api.pushover.net:443")
+	conn.request("POST", "/1/messages.json",
+  	urllib.urlencode({
+	"token": str(list[0]['config'][1]['pushoverapitoken']),
+	"user": str(list[0]['config'][2]['pushoveruserkey']),
+    	"message": fingerprint,
+  	}), { "Content-type": "application/x-www-form-urlencoded" })
+	conn.getresponse()
+
 
 Welcome()
 ConfigCheck()

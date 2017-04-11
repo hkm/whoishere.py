@@ -23,7 +23,7 @@ def ConfigCheck():
 		file.write('{'\
 		'"config" : [{"interface": "wlan0mon"},\n'\
 		'            {"pushoverapitoken": ""},\n'\
-		'            {"pushoveruserkey": "" }]\n'\
+		'            {"pushoveruserkey": "" }],\n'\
 		'"list"   : [{"name": "James Clerk Maxwell", "mac": "00:co:ca:c0:79:fa", "color": "1"},\n'\
 		'            {"name": "Christian Hulsmeyer", "mac": "ba:ad:c0:de:88:ca", "color": "2"},\n'\
         	'	     {"name": "Heinrich Hertz", "mac": "e0:0f:00:0a:d0:a0", "color": "3"}]\n'\
